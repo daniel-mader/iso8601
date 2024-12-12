@@ -172,3 +172,33 @@ mod test_datetime {
         assert_eq!(datetime.offset().fix().local_minus_utc(), 3623);
     }
 }
+
+impl TryFrom<crate::Duration> for chrono::TimeDelta {
+    type Error = ();
+
+    fn try_from(iso: crate::Duration) -> Result<Self, Self::Error> {
+        // convert to rust core library first
+        let cr = ::core::time::Duration::from(iso);
+        // split into seconds and nanoseconds
+        let secs: i64 = cr.as_secs().try_into().unwrap();
+        let nanos: u32 = cr.subsec_nanos();
+        // create a chrono from it
+        chrono::TimeDelta::new(secs, nanos).ok_or(())
+    }
+}
+
+#[cfg(test)]
+mod test_duration {
+
+    #[test]
+    fn duration_from_iso() {
+        let iso = crate::duration("P3Y5M2D").unwrap();
+        let timedelta = chrono::TimeDelta::try_from(iso).unwrap();
+
+        assert_eq!(timedelta.num_weeks(), 178);
+        assert_eq!(timedelta.num_days(), 1247);
+        assert_eq!(timedelta.num_hours(), 29928);
+        assert_eq!(timedelta.num_minutes(), 1795680);
+        assert_eq!(timedelta.num_seconds(), 107740800);
+    }
+}
